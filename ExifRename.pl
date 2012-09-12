@@ -1,16 +1,44 @@
 #!/usr/bin/perl
 use File::Basename;
 use Image::ExifTool; 
+use Getopt::Long;
+use Pod::Usage;
+use utf8;
 
-# ¥Õ¥é¥°¤¬¤¢¤ë¤â¤Î¤ò¥Õ¥¡¥¤¥ëÌ¾¤Ë
+# Check ARGV.
+if (-1 == $#ARGV) {
+ pod2usage(2);
+}
+ 
+
+
+# ãƒ•ãƒ©ã‚°ãŒã‚ã‚‹ã‚‚ã®ã‚’ãƒ•ã‚¡ã‚¤ãƒ«åã«
 my $MODEL="0";
-my $ORGFILENAME="1";
+#my $ORGFILENAME="1";
+my $ORGFILENAME="0";
 my $DATE="0";
+#my $ISO="1";
 my $ISO="0";
 my $MODE="0";
+#my $APT="1";
 my $APT="0";
 my $SHTR="0";
-my $EV="1";
+#my $EV="1";
+my $EV="0";
+
+GetOptions('model' => \$MODEL,
+           'org' => \$ORGFILENAME,
+           'date' => \$DATE,
+           'iso' => \$ISO,
+           'mode' => \$MODE,
+           'f' => \$APT,
+           'sht' => \$SHTR,
+           'ev' => \$EV) or pod2usage(2);
+
+#ã‚ªãƒ—ã‚·ãƒ§ãƒ³æŒ‡å®šãŒãªã‹ã£ãŸã‚‰
+if($MODEL+$ORGFILENAME+$DATE+$ISO+$MODE+$APT+$SHTR+$EV == 0){
+  pod2usage(2);
+}
 
 my $regex_suffix = qw/\.[^\.]+$/;
 
@@ -26,7 +54,7 @@ while(@ARGV){
 
   $file = shift @ARGV;
   $exifInfo = $exifTool->ImageInfo($file); 
-  $FileName; #ºÇ½ª¥Õ¥¡¥¤¥ëÌ¾
+  $FileName; #æœ€çµ‚ãƒ•ã‚¡ã‚¤ãƒ«å
 
   $KEY = "";
 
@@ -37,11 +65,11 @@ while(@ARGV){
   }
 
   
-  unless($exifInfo->{Error}){   #¥¿¥°¤¬Àµ¤·¤¯ÆÉ¤á¤ì¤Ğ°Ê²¼¤Î½èÍı
-      $Maker =  $exifInfo->{Make}; #¥á¡¼¥«¡¼¥¿¥°
-      $CameraName = ($exifInfo->{Model});  #µ¡¼ïÌ¾
-      $CameraName =~ s/\s+$//;          #µ¡¼ïÌ¾¤ò¥È¥ê¥à
-      $CameraName =~ s/\s/-/g;          #µ¡¼ïÌ¾¤Î¥¹¥Ú¡¼¥¹¤ò "-"¤ËÊÑ´¹
+  unless($exifInfo->{Error}){   #ã‚¿ã‚°ãŒæ­£ã—ãèª­ã‚ã‚Œã°ä»¥ä¸‹ã®å‡¦ç†
+      $Maker =  $exifInfo->{Make}; #ãƒ¡ãƒ¼ã‚«ãƒ¼ã‚¿ã‚°
+      $CameraName = ($exifInfo->{Model});  #æ©Ÿç¨®å
+      $CameraName =~ s/\s+$//;          #æ©Ÿç¨®åã‚’ãƒˆãƒªãƒ 
+      $CameraName =~ s/\s/-/g;          #æ©Ÿç¨®åã®ã‚¹ãƒšãƒ¼ã‚¹ã‚’ "-"ã«å¤‰æ›
     
     if($MODEL){
       $KEY .= "$CameraName";
@@ -61,19 +89,19 @@ while(@ARGV){
     }
     
     if($APT){
-      $F = $exifInfo->{Aperture};       #FÃÍ
+      $F = $exifInfo->{Aperture};       #Få€¤
       $KEY .= "_F".$F;
     }
 
     if($SHTR){
-      $Shutter = $exifInfo->{ShutterSpeed}; #¥·¥ã¥Ã¥¿¡¼¥¹¥Ô¡¼¥É
-      $Shutter =~ s/1\///;              #1/XX ¤ÎÃÍ¤ò XX¤ËÊÑ´¹
+      $Shutter = $exifInfo->{ShutterSpeed}; #ã‚·ãƒ£ãƒƒã‚¿ãƒ¼ã‚¹ãƒ”ãƒ¼ãƒ‰
+      $Shutter =~ s/1\///;              #1/XX ã®å€¤ã‚’ XXã«å¤‰æ›
       $Shutter = sprintf("%04d",$Shutter);
       $KEY .= "_SH".$Shutter;
     }
 
     if($MODE){
-      #²èÁü»Å¾å¤²¥â¡¼¥É¤Î¾ì¹çÊ¬¤±
+      #ç”»åƒä»•ä¸Šã’ãƒ¢ãƒ¼ãƒ‰ã®å ´åˆåˆ†ã‘
       if( $Maker =~ /NIKON/i  ) {
         if( $CameraName =~ /D/i ){
           $PicMode = "$exifInfo->{PictureControlName}";
@@ -106,43 +134,72 @@ while(@ARGV){
 
     if($EV){
       $Ev = $exifInfo->{ExposureCompensation};
-      $Ev = eval($Ev);  #Ev¤¬Ê¬¿ô¤Î¾ì¹ç¤Ë¡¢¾®¿ô¤ËÊÑ´¹¡£
+      $Ev = eval($Ev);  #EvãŒåˆ†æ•°ã®å ´åˆã«ã€å°æ•°ã«å¤‰æ›ã€‚
       $Ev = sprintf("%2.1f",$Ev);
 #      $Ev =~ s/-/m/g;
       $Ev =~ s/\+/p/g;
       $KEY .= "_EV".$Ev;
     }
 
-    $BaseDir = dirname($file);  #¥Ç¥£¥ì¥¯¥È¥ê¤ò¼èÆÀ
-    if ($BaseDir eq "."){       #¥«¥ì¥ó¥È¤Ê¤é¤Ê¤Ë¤â¤·¤Ê¤¤
+    $BaseDir = dirname($file);  #ãƒ‡ã‚£ãƒ¬ã‚¯ãƒˆãƒªã‚’å–å¾—
+    if ($BaseDir eq "."){       #ã‚«ãƒ¬ãƒ³ãƒˆãªã‚‰ãªã«ã‚‚ã—ãªã„
       $BaseDir = "";
     }else{
       $BaseDir .= "/";
     }
 
 
-#        #'.' ¤¬ 1¤Ä°Ê¾å¤¢¤ë¤«
+#        #'.' ãŒ 1ã¤ä»¥ä¸Šã‚ã‚‹ã‹
 #        if( index($name, '.',  0) != -1){
-#            $suffix = (split(/\./, $name))[-1];  #³ÈÄ¥»Ò¼è½Ğ¤·
+#            $suffix = (split(/\./, $name))[-1];  #æ‹¡å¼µå­å–å‡ºã—
 #        }
     
 
     $KEY =~ s/^_//;
     $KEY =~ s/__/_/;
     
-    #µ¡´ï¡¦¥â¡¼¥É¡¦FÃÍ¡¦¥·¥ã¥Ã¥¿¡¼¥¹¥Ô¡¼¥É ¤ò¥­¡¼¤Ë¤·¤Æ¥«¥¦¥ó¥È¥¢¥Ã¥×¤µ¤»¤ë
+    #æ©Ÿå™¨ãƒ»ãƒ¢ãƒ¼ãƒ‰ãƒ»Få€¤ãƒ»ã‚·ãƒ£ãƒƒã‚¿ãƒ¼ã‚¹ãƒ”ãƒ¼ãƒ‰ ã‚’ã‚­ãƒ¼ã«ã—ã¦ã‚«ã‚¦ãƒ³ãƒˆã‚¢ãƒƒãƒ—ã•ã›ã‚‹
     $FileHeader = $KEY;
     $hush{$KEY}++;
     
-    #ºÇ½ªÅª¤Ê¥Õ¥¡¥¤¥ëÌ¾
+    #æœ€çµ‚çš„ãªãƒ•ã‚¡ã‚¤ãƒ«å
 #    $FileName = sprintf("%s_%03d.%s",$BaseDir.$FileHeader,$hush{$FileHeader},$suffix);
-    $FileName = sprintf("%s_%03d%s",$BaseDir.$FileHeader,$hush{$FileHeader},$suffix);
+    if($hush{$FileHeader} > 1){
+      $FileName = sprintf("%s_%03d%s",$BaseDir.$FileHeader,$hush{$FileHeader},$suffix);
+    }else{
+      $FileName = sprintf("%s%s",$BaseDir.$FileHeader,$suffix);
+    }
+
     $FileName =~ s/__/_/;
     
-    rename($file,$FileName);     #¥Õ¥¡¥¤¥ëÌ¾ÊÑ¹¹
-    print OUT $file." -> ".$FileName."\n";  #É¸½à½ĞÎÏ¤Ë½ñ¤­½Ğ¤¹¡ÊÇ°¤Î¤¿¤á¡Ë
-    print $file." -> ".$FileName."\n";  #É¸½à½ĞÎÏ¤Ë½ñ¤­½Ğ¤¹¡ÊÇ°¤Î¤¿¤á¡Ë
+    rename($file,$FileName);     #ãƒ•ã‚¡ã‚¤ãƒ«åå¤‰æ›´
+    print OUT $file." -> ".$FileName."\n";  #æ¨™æº–å‡ºåŠ›ã«æ›¸ãå‡ºã™ï¼ˆå¿µã®ãŸã‚ï¼‰
+    print $file." -> ".$FileName."\n";  #æ¨™æº–å‡ºåŠ›ã«æ›¸ãå‡ºã™ï¼ˆå¿µã®ãŸã‚ï¼‰
 
     $cnt++;
   }
 }
+
+__END__
+
+
+=head1 NAME
+
+Exif Rename Tool
+
+=head1 SYNOPSIS
+
+ExifRename.pl [options] [file ...]
+
+ Options:
+   --model  CameraModelName
+   --org    Original Filename
+   --date   Date
+   --iso    ISO
+   --mode   PictureMode
+   --f      Apature
+   --sht    ShutterSpeed
+   --ev     ExposureCompensation
+
+=cut
+
