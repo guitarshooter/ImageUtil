@@ -10,7 +10,7 @@ while(@ARGV){
 #$exifTool->SetNewValue(Keywords => "yee", AddValue => 1);
 #$exifTool->WriteInfo($file);
 my($key); 
-for $key (sort keys %$exifInfo){ 
+for $key (keys %$exifInfo){ 
 print("$key : $exifInfo->{$key}\n");
 #print("ISO : $exifInfo->{ISO}\n"); 
 }

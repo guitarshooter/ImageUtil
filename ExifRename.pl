@@ -25,6 +25,8 @@ my $APT="0";
 my $SHTR="0";
 #my $EV="1";
 my $EV="0";
+my $FLEN="0";
+my $DryRun="0";
 
 GetOptions('model' => \$MODEL,
            'org' => \$ORGFILENAME,
@@ -33,12 +35,16 @@ GetOptions('model' => \$MODEL,
            'mode' => \$MODE,
            'f' => \$APT,
            'sht' => \$SHTR,
-           'ev' => \$EV) or pod2usage(2);
+           'ev' => \$EV,
+           'li' => \$LINFO,
+           'fl' => \$FLEN,
+           'no' => \$DryRun
+       ) or pod2usage(2);
 
 #オプション指定がなかったら
-if($MODEL+$ORGFILENAME+$DATE+$ISO+$MODE+$APT+$SHTR+$EV == 0){
-  pod2usage(2);
-}
+#if($MODEL+$ORGFILENAME+$DATE+$ISO+$MODE+$APT+$SHTR+$EV+$FLEN == 0){
+#  pod2usage(2);
+#}
 
 my $regex_suffix = qw/\.[^\.]+$/;
 
@@ -72,7 +78,14 @@ while(@ARGV){
       $CameraName =~ s/\s/-/g;          #機種名のスペースを "-"に変換
     
     if($MODEL){
-      $KEY .= "$CameraName";
+      $KEY .= "_"."$CameraName";
+    }
+
+    if($LINFO){
+      $lensinfo = $exifInfo->{LensInfo};
+      $lensinfo =~ s/ //g;
+      $lensinfo =~ s/\///g;
+      $KEY .= "_"."$lensinfo";
     }
 
     if($DATE){
@@ -85,6 +98,7 @@ while(@ARGV){
 
     if($ISO){
       $iso = $exifInfo->{ISO};
+      $iso = sprintf("%05d",$iso);
       $KEY .= "_ISO".$iso;
     }
     
@@ -132,6 +146,14 @@ while(@ARGV){
       $KEY .= "_"."$PicMode";
     }
 
+
+    if($FLEN){
+      $focallength = $exifInfo->{FocalLength};
+      $focallength =~ s/ //g;
+      $focallength =~ s/\.0//g;
+      $KEY .= "_"."$focallength";
+    }
+
     if($EV){
       $Ev = $exifInfo->{ExposureCompensation};
       $Ev = eval($Ev);  #Evが分数の場合に、小数に変換。
@@ -172,9 +194,11 @@ while(@ARGV){
 
     $FileName =~ s/__/_/;
     
-    rename($file,$FileName);     #ファイル名変更
-    print OUT $file." -> ".$FileName."\n";  #標準出力に書き出す（念のため）
-    print $file." -> ".$FileName."\n";  #標準出力に書き出す（念のため）
+    unless($DryRun){ #noフラグが立っている場合、実行しない
+      rename($file,$FileName);     #ファイル名変更
+    }
+    print OUT $file." -> ".$FileName."\n";  #ログファイルに書き出す
+    print $file." -> ".$FileName."\n";  #標準出力に書き出す
 
     $cnt++;
   }
@@ -191,15 +215,19 @@ Exif Rename Tool
 
 ExifRename.pl [options] [file ...]
 
- Options:
+ RenameMode:
    --model  CameraModelName
    --org    Original Filename
+   --fl     FocalLength
    --date   Date
    --iso    ISO
    --mode   PictureMode
    --f      Apature
    --sht    ShutterSpeed
+   --li     LensInfo
    --ev     ExposureCompensation
+ Options:
+   --no     Display Only(Dry Run)
 
 =cut
 
